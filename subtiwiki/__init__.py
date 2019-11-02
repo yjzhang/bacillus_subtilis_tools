@@ -66,7 +66,7 @@ def get_term_genes(term, threshold=3, db_dir=DB_DIR):
     return results
 
 
-def hypergeometric_test(genes, return_header=False, mode='all', db_dir=DB_DIR,):
+def hypergeometric_test(genes, return_header=False, mode='all', db_dir=DB_DIR, use_fdr=True):
     """
     Uses a hypergeometric test to identify the most relevant terms.
 
@@ -95,12 +95,18 @@ def hypergeometric_test(genes, return_header=False, mode='all', db_dir=DB_DIR,):
         k = len(overlapping_genes)
         pv = stats.hypergeom.cdf(k - 1, len(all_genes), len(genes_term), len(genes))
         overlapping_genes = list(overlapping_genes)
-        cell_p_vals[term] = (term_type, term, 1 - pv, overlapping_genes)
+        cell_p_vals[term] = [term_type, term, 1 - pv, overlapping_genes]
     cell_p_vals = list(cell_p_vals.items())
+    if use_fdr:
+        from statsmodels.stats import multitest
+        pvs = [x[1][2] for x in cell_p_vals] + [1]*(len(all_terms) - len(cell_p_vals))
+        rejected, pvs_corrected = multitest.fdrcorrection(pvs)
+        for i, x in enumerate(cell_p_vals):
+            x[1][2] = pvs_corrected[i]
     cell_p_vals.sort(key=lambda x: x[1][2])
     # merge items
     cell_p_vals = [x[1] for x in cell_p_vals]
     if return_header:
-        header = ['Term Type', 'Term', 'P-value', 'Overlapping Genes']
+        header = ['Term Type', 'Term', 'FDR-adjusted p-value', 'Overlapping Genes']
         cell_p_vals = [header] + cell_p_vals
     return cell_p_vals
