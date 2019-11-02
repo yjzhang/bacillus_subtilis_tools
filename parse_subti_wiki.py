@@ -83,7 +83,8 @@ c.execute('CREATE INDEX term_gene_index on term_gene(term, gene, type, level)')
 # create a gene info table
 c.execute('CREATE TABLE gene_info(gene text, locus text, description text, reviews text, research_papers text)')
 for i, row in gene_names_table.iterrows():
-    gene = row.name
+    gene = row['name']
+    print(gene)
     locus = row.locus
     desc = row.description
     reviews = row['References.Reviews']

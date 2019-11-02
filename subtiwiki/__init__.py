@@ -22,12 +22,15 @@ def get_all_genes(db_dir=DB_DIR):
     conn.close()
     return [x[0] for x in results]
 
-@lru_cache(maxsize=None)
-def get_gene_info(db_dir=DB_DIR, return_header=True):
+def get_gene_info(genes, db_dir=DB_DIR, return_header=True):
     conn = sqlite3.connect(db_dir)
     C = conn.cursor()
-    C.execute('SELECT * FROM gene_info')
-    results = C.fetchall()
+    results = []
+    for gene in genes:
+        C.execute('SELECT * FROM gene_info WHERE gene=?', (gene,))
+        r = C.fetchall()
+        print(gene, r)
+        results += r
     conn.close()
     if return_header:
         results = [('Gene', 'Locus', 'Description', 'Review PMIDs', 'Paper PMIDs')] + results
@@ -92,12 +95,12 @@ def hypergeometric_test(genes, return_header=False, mode='all', db_dir=DB_DIR,):
         k = len(overlapping_genes)
         pv = stats.hypergeom.cdf(k - 1, len(all_genes), len(genes_term), len(genes))
         overlapping_genes = list(overlapping_genes)
-        cell_p_vals[term] = (term_type, 1 - pv, overlapping_genes)
+        cell_p_vals[term] = (term_type, term, 1 - pv, overlapping_genes)
     cell_p_vals = list(cell_p_vals.items())
-    cell_p_vals.sort(key=lambda x: x[1][1])
+    cell_p_vals.sort(key=lambda x: x[1][2])
     # merge items
-    cell_p_vals = [(x[0],) + x[1] for x in cell_p_vals]
+    cell_p_vals = [x[1] for x in cell_p_vals]
     if return_header:
-        header = ['Term', 'Term Type', 'P-value', 'Overlapping Genes']
+        header = ['Term Type', 'Term', 'P-value', 'Overlapping Genes']
         cell_p_vals = [header] + cell_p_vals
     return cell_p_vals
